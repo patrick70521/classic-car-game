@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Classic Car Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="desk">
+      <div class="device" id="device">
+        <div class="hinge"></div>
+        <div class="bezel">
+          <div class="screen" id="screen">
+            <div class="hud" id="hud"></div>
+            <div class="scanlines"></div>
+            <div class="screen-glare"></div>
+          </div>
+        </div>
+        <div class="wordmark" aria-hidden="true">
+          <span class="wm-s">S</span>
+          <span class="wm-u">u</span>
+          <span class="wm-p">p</span>
+        </div>
+        <div class="reset-btn" data-btn="reset" role="button" aria-label="Reset"></div>
+        <div class="dpad" aria-label="Direction pad">
+          <div class="pad up" data-btn="up" role="button" aria-label="Forward"></div>
+          <div class="pad left" data-btn="left" role="button" aria-label="Left"></div>
+          <div class="pad right" data-btn="right" role="button" aria-label="Right"></div>
+          <div class="pad down" data-btn="down" role="button" aria-label="Backward"></div>
+          <div class="pad-hub"></div>
+        </div>
+        <div class="face">
+          <div class="round x" data-btn="x" role="button" aria-label="X">X</div>
+          <div class="round y" data-btn="y" role="button" aria-label="Y">Y</div>
+          <div class="round a" data-btn="a" role="button" aria-label="A">A</div>
+          <div class="round b" data-btn="b" role="button" aria-label="B">B</div>
+        </div>
+        <div class="pills">
+          <div class="pill" data-btn="select" role="button" aria-label="Select"><span>SELECT</span></div>
+          <div class="pill" data-btn="start" role="button" aria-label="Start"><span>START</span></div>
+        </div>
+        <div class="speaker" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

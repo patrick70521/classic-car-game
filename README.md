@@ -1,0 +1,18 @@
+# classic-car-game
+
+A third-person classic car game on a red handheld simulator. Drive with the on-screen D-pad: up accelerates, down brakes and reverses, left and right steer. Arrow keys do the same thing.
+
+The screen menu has three modes:
+
+- Free drive
+- Lap race, three laps through the gates
+- Timed cruise, press A to start and stop the timer
+
+## Run
+
+```bash
+npm install
+npm run dev
+```
+
+Open the URL Vite prints.
