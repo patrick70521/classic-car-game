@@ -2,12 +2,13 @@ const MODES = [
   { id: 'free', label: 'FREE DRIVE' },
   { id: 'race', label: 'LAP RACE' },
   { id: 'cruise', label: 'TIMED CRUISE' },
+  { id: 'soccer', label: 'SOCCER' },
 ]
 
 const BEST_KEY = 'classic-car-best-ms'
 const RACE_LAPS = 3
 
-export function createGame({ input, car, world, chase, hud }) {
+export function createGame({ input, car, world, chase, hud, soccer }) {
   let state = 'menu'
   let mode = 'free'
   let selection = 0
@@ -68,6 +69,7 @@ export function createGame({ input, car, world, chase, hud }) {
   function startMode(id) {
     state = 'play'
     freshRun(id)
+    if (id === 'soccer') soccer.reset()
   }
 
   function distanceTo(index) {
@@ -157,6 +159,12 @@ export function createGame({ input, car, world, chase, hud }) {
       return
     }
 
+    if (mode === 'soccer') {
+      soccer.update(dt, input, edge.a)
+      render()
+      return
+    }
+
     if (mode === 'cruise' && edge.a) {
       cruiseRunning = !cruiseRunning
       if (cruiseRunning && distanceTo(nextCp) <= world.checkpointRadius) waitExit = true
@@ -174,10 +182,27 @@ export function createGame({ input, car, world, chase, hud }) {
     if (state === 'menu') {
       hud.innerHTML = `
         <div class="menu">
-          <div class="title">CLASSIC<br>CAR</div>
+          <div class="title">PICK<br>GAME</div>
           ${MODES.map((item, index) => `<div class="item${index === selection ? ' sel' : ''}">${item.label}</div>`).join('')}
           <div class="hint">PAD OR ARROWS<br>A TO START</div>
         </div>`
+      return
+    }
+
+    if (mode === 'soccer') {
+      const { you, them, message } = soccer.status()
+      const board = `<div class="stats">YOU ${you}<br>THEM ${them}</div><div class="speed">A KICK</div>`
+      if (state === 'pause') {
+        hud.innerHTML = `
+          ${board}
+          <div class="menu">
+            <div class="title">PAUSED</div>
+            <div class="hint">START RESUME<br>B MENU</div>
+          </div>`
+        return
+      }
+      const banner = message ? `<div class="menu"><div class="title">${message}</div></div>` : ''
+      hud.innerHTML = board + banner
       return
     }
 
@@ -225,7 +250,12 @@ export function createGame({ input, car, world, chase, hud }) {
   }
 
   goMenu()
-  return { update }
+  return {
+    update,
+    view() {
+      return state !== 'menu' && mode === 'soccer' ? 'soccer' : 'car'
+    },
+  }
 }
 
 function formatTime(ms) {
