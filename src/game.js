@@ -1,3 +1,8 @@
+const DISPLAYS = [
+  { id: 'full', label: 'FULL SCREEN' },
+  { id: 'supreme', label: 'SUPREME' },
+]
+
 const MODES = [
   { id: 'free', label: 'FREE DRIVE' },
   { id: 'race', label: 'LAP RACE' },
@@ -26,8 +31,10 @@ const BEST_KEY = 'classic-car-best-ms'
 const RACE_LAPS = 3
 
 export function createGame({ input, car, world, chase, hud, soccer, garage }) {
-  let state = 'menu'
+  let state = 'display'
   let mode = 'free'
+  let displayPick = 0
+  let displayHold = 0
   let selection = 0
   let menuHold = 0
   let carPick = 0
@@ -80,6 +87,25 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     newBest = false
     waitExit = false
     world.setActive(nextMode === 'free' ? -1 : 1)
+  }
+
+  function applyShell(full) {
+    document.body.classList.toggle('is-fullscreen', full)
+    const root = document.documentElement
+    if (full) {
+      if (!document.fullscreenElement && root.requestFullscreen) {
+        root.requestFullscreen().catch(() => {})
+      }
+    } else if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {})
+    }
+  }
+
+  function goDisplay() {
+    state = 'display'
+    freshRun('free')
+    world.setActive(-1)
+    applyShell(false)
   }
 
   function goMenu() {
@@ -170,7 +196,28 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     }
 
     if (edge.reset) {
-      goMenu()
+      goDisplay()
+      render()
+      return
+    }
+
+    if (state === 'display') {
+      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (dir === 0) displayHold = 0
+      else if (edge.up || edge.down) {
+        displayPick = (displayPick + dir + DISPLAYS.length) % DISPLAYS.length
+        displayHold = 0
+      } else {
+        displayHold += dt
+        if (displayHold > 0.42) {
+          displayPick = (displayPick + dir + DISPLAYS.length) % DISPLAYS.length
+          displayHold = 0.22
+        }
+      }
+      if (edge.a) {
+        applyShell(DISPLAYS[displayPick].id === 'full')
+        state = 'menu'
+      }
       render()
       return
     }
@@ -189,6 +236,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
         }
       }
       if (edge.a) startMode(MODES[selection].id)
+      if (edge.b || edge.select) goDisplay()
       render()
       return
     }
@@ -264,12 +312,22 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
 
   function render() {
     const mph = Math.round(Math.abs(car.pose.speed) * 4)
+    if (state === 'display') {
+      hud.innerHTML = `
+        <div class="menu">
+          <div class="title">PICK<br>SCREEN</div>
+          ${DISPLAYS.map((item, index) => `<div class="item${index === displayPick ? ' sel' : ''}">${item.label}</div>`).join('')}
+          <div class="hint">UP DOWN<br>A TO START</div>
+        </div>`
+      return
+    }
+
     if (state === 'menu') {
       hud.innerHTML = `
         <div class="menu">
           <div class="title">PICK<br>GAME</div>
           ${MODES.map((item, index) => `<div class="item${index === selection ? ' sel' : ''}">${item.label}</div>`).join('')}
-          <div class="hint">PAD OR ARROWS<br>A TO START</div>
+          <div class="hint">PAD OR ARROWS<br>A TO START<br>B SCREEN</div>
         </div>`
       return
     }
@@ -345,7 +403,24 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
       ${speed}`
   }
 
-  goMenu()
+  window.addEventListener('keydown', (event) => {
+    if (event.repeat) return
+    if (state === 'display' && (event.code === 'Enter' || event.code === 'KeyA')) {
+      applyShell(DISPLAYS[displayPick].id === 'full')
+    }
+    if ((state === 'menu' || state === 'display') && (event.code === 'KeyB' || event.code === 'Escape' || event.code === 'Backspace')) {
+      if (state === 'menu') applyShell(false)
+    }
+  })
+  document.querySelector('[data-btn="a"]')?.addEventListener('pointerdown', () => {
+    if (state !== 'display') return
+    applyShell(DISPLAYS[displayPick].id === 'full')
+  })
+  document.querySelector('[data-btn="b"]')?.addEventListener('pointerdown', () => {
+    if (state === 'menu') applyShell(false)
+  })
+
+  goDisplay()
   return {
     update,
     view() {

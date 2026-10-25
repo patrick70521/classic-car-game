@@ -59,6 +59,7 @@ export function createGarage() {
     const spinner = new THREE.Group()
     spinner.position.set(Math.sin(angle) * RADIUS, 0, Math.cos(angle) * RADIUS)
     spinner.rotation.y = angle
+    spinner.userData.outward = angle
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 0.08, 36), discMat)
     disc.position.y = 0.04
     disc.receiveShadow = true
@@ -71,9 +72,9 @@ export function createGarage() {
   }
 
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 60)
-  camera.position.set(2.6, 2.7, 11.2)
-  camera.lookAt(0, 0.7, 2.4)
-  key.target.position.set(0, 0.6, 3.2)
+  camera.position.set(0, 1.9, 10.6)
+  camera.lookAt(0, 0.65, 4.8)
+  key.target.position.set(0, 0.65, 4.8)
   scene.add(key.target)
 
   let focusIndex = 0
@@ -94,7 +95,10 @@ export function createGarage() {
     const delta = Math.atan2(Math.sin(target - ringYaw), Math.cos(target - ringYaw))
     ringYaw += delta * Math.min(1, dt * 5)
     ring.rotation.y = ringYaw
-    for (const pad of pads) pad.rotation.y += dt * 0.45
+    for (let i = 0; i < pads.length; i += 1) {
+      if (i === focusIndex) pads[i].rotation.y += dt * 0.45
+      else pads[i].rotation.y = pads[i].userData.outward
+    }
   }
 
   return { scene, camera, focus, paint, update }

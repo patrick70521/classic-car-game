@@ -316,6 +316,86 @@ body {
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.8);
 }
 
+body.is-fullscreen .desk {
+  height: 100vh;
+  min-height: 100vh;
+  padding: 0;
+  background: #07080c;
+}
+
+body.is-fullscreen .device {
+  width: 100vw;
+  height: 100vh;
+  min-width: 0;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: #07080c;
+  box-shadow: none;
+}
+
+body.is-fullscreen .hinge,
+body.is-fullscreen .wordmark,
+body.is-fullscreen .speaker {
+  display: none;
+}
+
+body.is-fullscreen .bezel {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.is-fullscreen .screen {
+  border-radius: 0;
+}
+
+body.is-fullscreen .dpad {
+  left: 18px;
+  top: auto;
+  bottom: 18px;
+  width: 132px;
+}
+
+body.is-fullscreen .face {
+  right: 18px;
+  top: auto;
+  bottom: 18px;
+  width: 148px;
+}
+
+body.is-fullscreen .round {
+  font-size: 14px;
+}
+
+body.is-fullscreen .reset-btn {
+  left: 50%;
+  top: auto;
+  bottom: 28px;
+  width: 28px;
+  margin-left: -14px;
+}
+
+body.is-fullscreen .pills {
+  left: 50%;
+  bottom: 78px;
+  gap: 10px;
+  transform: translateX(-50%);
+}
+
+body.is-fullscreen .pill {
+  width: 72px;
+  height: 26px;
+}
+
+body.is-fullscreen .pill span {
+  font-size: 10px;
+}
+
 [data-btn] { cursor: pointer; }
 [data-btn].is-down { filter: brightness(0.62); }
 .round.is-down, .pill.is-down, .reset-btn.is-down { transform: translateY(0.35cqi); }
