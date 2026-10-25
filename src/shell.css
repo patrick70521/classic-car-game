@@ -129,6 +129,11 @@ body {
   text-align: left;
 }
 
+.menu.high {
+  top: 7%;
+  transform: translate(-50%, 0);
+}
+
 .title {
   color: #ffe56a;
   text-align: center;

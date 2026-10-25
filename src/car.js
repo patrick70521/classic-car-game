@@ -6,106 +6,45 @@ const CAR_RADIUS = 1.15
 export function createCar(scene) {
   const pose = { x: 0, z: 0, heading: 0, speed: 0, onRoad: true }
   const root = new THREE.Group()
-  const body = new THREE.Group()
-  root.add(body)
   scene.add(root)
 
-  const paint = new THREE.MeshStandardMaterial({ color: '#f3efe4', roughness: 0.42, metalness: 0.18 })
-  const stripe = new THREE.MeshStandardMaterial({ color: '#b4332a', roughness: 0.5, metalness: 0.05 })
-  const dark = new THREE.MeshStandardMaterial({ color: '#1a242c', roughness: 0.25, metalness: 0.08 })
-  const chrome = new THREE.MeshStandardMaterial({ color: '#d5d8dd', roughness: 0.28, metalness: 0.85 })
-  const tireMat = new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.95 })
-  const hubMat = new THREE.MeshStandardMaterial({ color: '#c8ccd1', roughness: 0.35, metalness: 0.7 })
-  const tailMat = new THREE.MeshStandardMaterial({
-    color: '#ff3b30',
-    emissive: '#ff2a22',
-    emissiveIntensity: 0.25,
-    roughness: 0.4,
-  })
-  const lampMat = new THREE.MeshStandardMaterial({
-    color: '#fff4cf',
-    emissive: '#ffe7a3',
-    emissiveIntensity: 1.4,
-    roughness: 0.35,
-  })
-
-  function addBox(w, h, d, x, y, z, material, parent = body) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
-    mesh.position.set(x, y, z)
-    mesh.castShadow = true
-    mesh.receiveShadow = true
-    parent.add(mesh)
-    return mesh
-  }
-
-  addBox(1.82, 0.46, 4.05, 0, 0.58, 0, paint)
-  addBox(1.7, 0.14, 1.35, 0, 0.84, 1.15, paint)
-  addBox(1.66, 0.16, 0.72, 0, 0.86, -1.55, paint)
-  addBox(1.56, 0.46, 1.65, 0, 1.02, -0.28, paint)
-  addBox(1.84, 0.08, 3.3, 0, 0.78, -0.1, stripe)
-  addBox(1.42, 0.34, 0.06, 0, 1.08, 0.52, dark).rotation.x = -0.42
-  addBox(1.36, 0.28, 0.06, 0, 1.08, -1.08, dark)
-  addBox(0.62, 0.28, 0.05, 0.78, 1.05, -0.28, dark)
-  addBox(0.62, 0.28, 0.05, -0.78, 1.05, -0.28, dark)
-  addBox(1.92, 0.16, 0.16, 0, 0.42, 2.08, chrome)
-  addBox(1.92, 0.16, 0.16, 0, 0.42, -2.08, chrome)
-  addBox(0.28, 0.16, 0.08, 0.62, 0.72, 2.08, lampMat)
-  addBox(0.28, 0.16, 0.08, -0.62, 0.72, 2.08, lampMat)
   const headlight = new THREE.SpotLight('#fff4d2', 18, 42, 0.62, 0.42, 1.1)
-  headlight.position.set(0, 1.15, 1.5)
+  headlight.position.set(0, 1.05, 1.5)
   const headTarget = new THREE.Object3D()
   headTarget.position.set(0, 0.15, 18)
   const nose = new THREE.PointLight('#fff1c9', 1.4, 9, 2)
-  nose.position.set(0, 1.05, 1.7)
+  nose.position.set(0, 0.95, 1.7)
   root.add(headlight, headTarget, nose)
   headlight.target = headTarget
-  addBox(0.32, 0.16, 0.08, 0.62, 0.72, -2.08, tailMat)
-  addBox(0.32, 0.16, 0.08, -0.62, 0.72, -2.08, tailMat)
 
-  const plate = new THREE.Mesh(
-    new THREE.BoxGeometry(0.62, 0.22, 0.04),
-    new THREE.MeshStandardMaterial({ map: plateTexture(), roughness: 0.6 }),
-  )
-  plate.position.set(0, 0.48, -2.2)
-  body.add(plate)
-
-  const cabin = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), dark)
-  cabin.position.set(0.28, 1.18, -0.15)
-  cabin.castShadow = true
-  body.add(cabin)
-
-  const wheels = []
-  function makeWheel(x, z, front) {
-    const steerPivot = new THREE.Group()
-    steerPivot.position.set(x, 0.36, z)
-    const spin = new THREE.Group()
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.28, 18), tireMat)
-    tire.rotation.z = Math.PI / 2
-    tire.castShadow = true
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 12), hubMat)
-    hub.rotation.z = Math.PI / 2
-    const nub = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.08), stripe)
-    nub.position.set(0, 0.28, 0)
-    spin.add(tire, hub, nub)
-    steerPivot.add(spin)
-    body.add(steerPivot)
-    wheels.push({ spin, steerPivot, front })
+  const styles = {
+    cyber: buildCybertruck(),
+    lambo: buildLamborghini(),
   }
-
-  makeWheel(0.95, 1.28, true)
-  makeWheel(-0.95, 1.28, true)
-  makeWheel(0.95, -1.28, false)
-  makeWheel(-0.95, -1.28, false)
+  root.add(styles.cyber.group, styles.lambo.group)
+  let style = 'cyber'
+  styles.lambo.group.visible = false
 
   let steerVisual = 0
+
+  function active() {
+    return styles[style]
+  }
+
+  function setStyle(id) {
+    style = id === 'lambo' ? 'lambo' : 'cyber'
+    styles.cyber.group.visible = style === 'cyber'
+    styles.lambo.group.visible = style === 'lambo'
+  }
 
   function sync(dt, braking) {
     root.position.set(pose.x, 0.04, pose.z)
     root.rotation.y = yawForHeading(pose.heading)
-    body.rotation.z = -steerVisual * 0.08
-    tailMat.emissiveIntensity = braking && pose.speed > 0.4 ? 1 : 0.22
-    const spin = (pose.speed / 0.36) * dt
-    for (const wheel of wheels) {
+    const current = active()
+    current.group.rotation.z = -steerVisual * 0.08
+    current.tail.emissiveIntensity = braking && pose.speed > 0.4 ? 1 : 0.22
+    const spin = (pose.speed / current.wheelRadius) * dt
+    for (const wheel of current.wheels) {
       wheel.spin.rotation.x -= spin
       wheel.steerPivot.rotation.y = wheel.front ? -steerVisual : 0
     }
@@ -192,25 +131,130 @@ export function createCar(scene) {
     sync(0, false)
   }
 
-  return { pose, update, reset }
+  return { pose, update, reset, setStyle }
 }
 
-function plateTexture() {
-  const canvas = document.createElement('canvas')
-  canvas.width = 128
-  canvas.height = 48
-  const ctx = canvas.getContext('2d')
-  ctx.fillStyle = '#f4d35e'
-  ctx.fillRect(0, 0, 128, 48)
-  ctx.strokeStyle = '#222'
-  ctx.lineWidth = 6
-  ctx.strokeRect(3, 3, 122, 42)
-  ctx.fillStyle = '#222'
-  ctx.font = 'bold 22px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('CLASSIC', 64, 26)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  return texture
+function buildCybertruck() {
+  const group = new THREE.Group()
+  const steel = new THREE.MeshStandardMaterial({ color: '#c5c8ce', roughness: 0.38, metalness: 0.72 })
+  const dark = new THREE.MeshStandardMaterial({ color: '#1b1e24', roughness: 0.45, metalness: 0.15 })
+  const glass = new THREE.MeshStandardMaterial({ color: '#9eb4c4', roughness: 0.12, metalness: 0.35 })
+  const lamp = new THREE.MeshStandardMaterial({
+    color: '#fff4cf',
+    emissive: '#ffe7a3',
+    emissiveIntensity: 1.4,
+    roughness: 0.35,
+  })
+  const tail = new THREE.MeshStandardMaterial({
+    color: '#ff3b30',
+    emissive: '#ff2a22',
+    emissiveIntensity: 0.22,
+    roughness: 0.4,
+  })
+
+  function addBox(w, h, d, x, y, z, material) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+    mesh.position.set(x, y, z)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    group.add(mesh)
+    return mesh
+  }
+
+  addBox(2.05, 0.62, 4.55, 0, 0.62, 0, steel)
+  const hood = addBox(1.95, 0.16, 1.55, 0, 1.02, 1.25, steel)
+  hood.rotation.x = -0.42
+  addBox(1.9, 0.58, 1.7, 0, 1.12, -0.15, steel)
+  const windshield = addBox(1.72, 0.5, 0.08, 0, 1.18, 0.72, glass)
+  windshield.rotation.x = -0.55
+  addBox(1.55, 0.28, 0.06, 0, 1.22, -0.95, glass)
+  addBox(1.72, 0.12, 1.35, 0, 1.08, -1.45, steel)
+  addBox(1.55, 0.08, 0.1, 0, 0.82, 2.22, lamp)
+  addBox(1.7, 0.1, 0.08, 0, 0.72, -2.28, tail)
+
+  const wheels = [
+    makeWheel(group, 1.08, 1.5, true, 0.42, dark),
+    makeWheel(group, -1.08, 1.5, true, 0.42, dark),
+    makeWheel(group, 1.08, -1.5, false, 0.42, dark),
+    makeWheel(group, -1.08, -1.5, false, 0.42, dark),
+  ]
+  return { group, wheels, tail, wheelRadius: 0.42 }
+}
+
+function buildLamborghini() {
+  const group = new THREE.Group()
+  const yellow = new THREE.MeshStandardMaterial({ color: '#f0c106', roughness: 0.32, metalness: 0.22 })
+  const black = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.55, metalness: 0.08 })
+  const glass = new THREE.MeshStandardMaterial({ color: '#1c242c', roughness: 0.08, metalness: 0.4 })
+  const lamp = new THREE.MeshStandardMaterial({
+    color: '#fff4cf',
+    emissive: '#ffe7a3',
+    emissiveIntensity: 1.4,
+    roughness: 0.35,
+  })
+  const tail = new THREE.MeshStandardMaterial({
+    color: '#ff3b30',
+    emissive: '#ff2a22',
+    emissiveIntensity: 0.22,
+    roughness: 0.4,
+  })
+
+  function addBox(w, h, d, x, y, z, material) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+    mesh.position.set(x, y, z)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    group.add(mesh)
+    return mesh
+  }
+
+  addBox(2.08, 0.34, 4.15, 0, 0.4, -0.05, yellow)
+  const nose = addBox(1.35, 0.16, 0.85, 0, 0.4, 1.95, yellow)
+  nose.rotation.x = 0.35
+  addBox(1.95, 0.16, 1.45, 0, 0.58, 0.85, yellow)
+  addBox(1.45, 0.32, 1.15, 0, 0.68, -0.15, yellow)
+  const windshield = addBox(1.28, 0.36, 0.06, 0, 0.78, 0.42, glass)
+  windshield.rotation.x = -0.7
+  addBox(1.2, 0.22, 0.05, 0, 0.78, -0.7, glass)
+  addBox(0.16, 0.22, 0.7, 0.96, 0.52, 0.15, black)
+  addBox(0.16, 0.22, 0.7, -0.96, 0.52, 0.15, black)
+  addBox(1.85, 0.2, 0.85, 0, 0.58, -1.45, yellow)
+  addBox(0.08, 0.42, 0.08, 0.62, 0.86, -1.85, black)
+  addBox(0.08, 0.42, 0.08, -0.62, 0.86, -1.85, black)
+  addBox(1.75, 0.07, 0.38, 0, 1.08, -1.9, black)
+  addBox(0.42, 0.1, 0.08, 0.55, 0.48, 2.05, lamp)
+  addBox(0.42, 0.1, 0.08, -0.55, 0.48, 2.05, lamp)
+  addBox(0.55, 0.1, 0.06, 0.62, 0.5, -2.1, tail)
+  addBox(0.55, 0.1, 0.06, -0.62, 0.5, -2.1, tail)
+
+  const wheels = [
+    makeWheel(group, 1.02, 1.32, true, 0.34, black),
+    makeWheel(group, -1.02, 1.32, true, 0.34, black),
+    makeWheel(group, 1.02, -1.38, false, 0.34, black),
+    makeWheel(group, -1.02, -1.38, false, 0.34, black),
+  ]
+  return { group, wheels, tail, wheelRadius: 0.34 }
+}
+
+function makeWheel(parent, x, z, front, radius, accent) {
+  const steerPivot = new THREE.Group()
+  steerPivot.position.set(x, radius, z)
+  const spin = new THREE.Group()
+  const tire = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, 0.3, 18),
+    new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.95 }),
+  )
+  tire.rotation.z = Math.PI / 2
+  tire.castShadow = true
+  const hub = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.42, radius * 0.42, 0.32, 12),
+    new THREE.MeshStandardMaterial({ color: '#c8ccd1', roughness: 0.35, metalness: 0.7 }),
+  )
+  hub.rotation.z = Math.PI / 2
+  const nub = new THREE.Mesh(new THREE.BoxGeometry(0.08, radius * 0.28, 0.08), accent)
+  nub.position.set(0, radius * 0.72, 0)
+  spin.add(tire, hub, nub)
+  steerPivot.add(spin)
+  parent.add(steerPivot)
+  return { spin, steerPivot, front }
 }

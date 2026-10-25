@@ -5,6 +5,11 @@ const MODES = [
   { id: 'soccer', label: 'SOCCER' },
 ]
 
+const CARS = [
+  { id: 'cyber', label: 'CYBERTRUCK' },
+  { id: 'lambo', label: 'LAMBORGHINI' },
+]
+
 const BEST_KEY = 'classic-car-best-ms'
 const RACE_LAPS = 3
 
@@ -13,6 +18,9 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
   let mode = 'free'
   let selection = 0
   let menuHold = 0
+  let carPick = 0
+  let carHold = 0
+  let pendingMode = 'free'
   let nextCp = 1
   let laps = 0
   let raceMs = 0
@@ -67,9 +75,18 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
   }
 
   function startMode(id) {
-    state = 'play'
-    freshRun(id)
-    if (id === 'soccer') soccer.reset()
+    if (id === 'soccer') {
+      state = 'play'
+      freshRun(id)
+      soccer.reset()
+      return
+    }
+    pendingMode = id
+    state = 'pick-car'
+    carHold = 0
+    car.reset(world.startPose)
+    chase.snapNext()
+    car.setStyle(CARS[carPick].id)
   }
 
   function distanceTo(index) {
@@ -153,6 +170,31 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
       return
     }
 
+    if (state === 'pick-car') {
+      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (dir === 0) carHold = 0
+      else if (edge.up || edge.down) {
+        carPick = (carPick + dir + CARS.length) % CARS.length
+        carHold = 0
+        car.setStyle(CARS[carPick].id)
+      } else {
+        carHold += dt
+        if (carHold > 0.42) {
+          carPick = (carPick + dir + CARS.length) % CARS.length
+          carHold = 0.22
+          car.setStyle(CARS[carPick].id)
+        }
+      }
+      if (edge.a) {
+        const chosen = CARS[carPick].id
+        state = 'play'
+        freshRun(pendingMode)
+        car.setStyle(chosen)
+      }
+      render()
+      return
+    }
+
     if (edge.start) state = state === 'pause' ? 'play' : 'pause'
     if (state === 'pause') {
       render()
@@ -185,6 +227,16 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
           <div class="title">PICK<br>GAME</div>
           ${MODES.map((item, index) => `<div class="item${index === selection ? ' sel' : ''}">${item.label}</div>`).join('')}
           <div class="hint">PAD OR ARROWS<br>A TO START</div>
+        </div>`
+      return
+    }
+
+    if (state === 'pick-car') {
+      hud.innerHTML = `
+        <div class="menu high">
+          <div class="title">PICK<br>CAR</div>
+          ${CARS.map((item, index) => `<div class="item${index === carPick ? ' sel' : ''}">${item.label}</div>`).join('')}
+          <div class="hint">A TO DRIVE<br>B MENU</div>
         </div>`
       return
     }
