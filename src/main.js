@@ -3,6 +3,7 @@ import './shell.css'
 import { createChaseCamera } from './camera.js'
 import { createCar } from './car.js'
 import { createGame } from './game.js'
+import { createGarage } from './garage.js'
 import { createInput } from './input.js'
 import { createSoccer } from './soccer.js'
 import { createWorld } from './world.js'
@@ -26,8 +27,9 @@ const world = createWorld(scene)
 const car = createCar(scene)
 const chase = createChaseCamera(camera)
 const soccer = createSoccer()
+const garage = createGarage()
 const input = createInput(document.getElementById('device'))
-const game = createGame({ input, car, world, chase, hud, soccer })
+const game = createGame({ input, car, world, chase, hud, soccer, garage })
 
 function resize() {
   const width = Math.max(1, screen.clientWidth)
@@ -37,6 +39,8 @@ function resize() {
   camera.updateProjectionMatrix()
   soccer.camera.aspect = width / height
   soccer.camera.updateProjectionMatrix()
+  garage.camera.aspect = width / height
+  garage.camera.updateProjectionMatrix()
 }
 
 const observer = new ResizeObserver(resize)
@@ -49,8 +53,12 @@ function frame(now) {
   last = now
   game.update(dt)
   world.update(dt, car.pose.x, car.pose.z)
-  if (game.view() === 'soccer') {
+  const view = game.view()
+  if (view === 'soccer') {
     renderer.render(soccer.scene, soccer.camera)
+  } else if (view === 'garage') {
+    garage.update(dt)
+    renderer.render(garage.scene, garage.camera)
   } else {
     chase.update(dt, car.pose)
     renderer.render(scene, camera)

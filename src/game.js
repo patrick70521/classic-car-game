@@ -8,19 +8,31 @@ const MODES = [
 const CARS = [
   { id: 'cyber', label: 'CYBERTRUCK' },
   { id: 'lambo', label: 'LAMBORGHINI' },
+  { id: 'ferrari', label: 'FERRARI' },
+]
+
+const COLORS = [
+  { label: 'SILVER', hex: '#c5c8ce' },
+  { label: 'RED', hex: '#d01212' },
+  { label: 'YELLOW', hex: '#f0c106' },
+  { label: 'WHITE', hex: '#f4f4f4' },
+  { label: 'BLACK', hex: '#1a1a1a' },
+  { label: 'BLUE', hex: '#1d4ed8' },
 ]
 
 const BEST_KEY = 'classic-car-best-ms'
 const RACE_LAPS = 3
 
-export function createGame({ input, car, world, chase, hud, soccer }) {
+export function createGame({ input, car, world, chase, hud, soccer, garage }) {
   let state = 'menu'
   let mode = 'free'
   let selection = 0
   let menuHold = 0
   let carPick = 0
-  let carHold = 0
+  let sideHold = 0
+  let colorHold = 0
   let pendingMode = 'free'
+  const colorPick = { cyber: 0, lambo: 2, ferrari: 1 }
   let nextCp = 1
   let laps = 0
   let raceMs = 0
@@ -83,10 +95,22 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
     }
     pendingMode = id
     state = 'pick-car'
-    carHold = 0
-    car.reset(world.startPose)
-    chase.snapNext()
-    car.setStyle(CARS[carPick].id)
+    sideHold = 0
+    colorHold = 0
+    car.mount(garage.turntable)
+    showCar()
+  }
+
+  function showCar() {
+    const id = CARS[carPick].id
+    car.setStyle(id)
+    car.setColor(COLORS[colorPick[id]].hex)
+  }
+
+  function shiftColor(dir) {
+    const id = CARS[carPick].id
+    colorPick[id] = (colorPick[id] + dir + COLORS.length) % COLORS.length
+    car.setColor(COLORS[colorPick[id]].hex)
   }
 
   function distanceTo(index) {
@@ -171,25 +195,39 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
     }
 
     if (state === 'pick-car') {
-      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
-      if (dir === 0) carHold = 0
-      else if (edge.up || edge.down) {
-        carPick = (carPick + dir + CARS.length) % CARS.length
-        carHold = 0
-        car.setStyle(CARS[carPick].id)
+      const side = (input.held.right ? 1 : 0) - (input.held.left ? 1 : 0)
+      if (side === 0) sideHold = 0
+      else if (edge.left || edge.right) {
+        carPick = (carPick + side + CARS.length) % CARS.length
+        sideHold = 0
+        showCar()
       } else {
-        carHold += dt
-        if (carHold > 0.42) {
-          carPick = (carPick + dir + CARS.length) % CARS.length
-          carHold = 0.22
-          car.setStyle(CARS[carPick].id)
+        sideHold += dt
+        if (sideHold > 0.42) {
+          carPick = (carPick + side + CARS.length) % CARS.length
+          sideHold = 0.22
+          showCar()
+        }
+      }
+      const colorDir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (colorDir === 0) colorHold = 0
+      else if (edge.up || edge.down) {
+        shiftColor(colorDir)
+        colorHold = 0
+      } else {
+        colorHold += dt
+        if (colorHold > 0.42) {
+          shiftColor(colorDir)
+          colorHold = 0.22
         }
       }
       if (edge.a) {
         const chosen = CARS[carPick].id
+        const color = COLORS[colorPick[chosen]].hex
         state = 'play'
         freshRun(pendingMode)
         car.setStyle(chosen)
+        car.setColor(color)
       }
       render()
       return
@@ -232,11 +270,12 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
     }
 
     if (state === 'pick-car') {
+      const id = CARS[carPick].id
       hud.innerHTML = `
         <div class="menu high">
-          <div class="title">PICK<br>CAR</div>
-          ${CARS.map((item, index) => `<div class="item${index === carPick ? ' sel' : ''}">${item.label}</div>`).join('')}
-          <div class="hint">A TO DRIVE<br>B MENU</div>
+          <div class="title">${CARS[carPick].label}</div>
+          <div class="item sel">${COLORS[colorPick[id]].label}</div>
+          <div class="hint">LEFT RIGHT CAR<br>UP DOWN COLOR<br>A DRIVE<br>B MENU</div>
         </div>`
       return
     }
@@ -305,6 +344,7 @@ export function createGame({ input, car, world, chase, hud, soccer }) {
   return {
     update,
     view() {
+      if (state === 'pick-car') return 'garage'
       return state !== 'menu' && mode === 'soccer' ? 'soccer' : 'car'
     },
   }
