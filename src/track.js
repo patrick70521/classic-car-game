@@ -5,7 +5,8 @@ export const ARC = Math.PI * RADIUS
 export const PERIM = STRAIGHT * 2 + ARC * 2
 export const CHECKPOINT_RADIUS = 9
 export const TREE_RADIUS = 0.8
-export const LIMIT = 108
+export const LIMIT = 116
+export const STREET_HALF = 5.2
 
 const HALF = STRAIGHT / 2
 
@@ -18,39 +19,62 @@ export const CHECKPOINT_T = [
 
 export const CHECKPOINT_NAMES = ['START', 'GATE 1', 'GATE 2', 'GATE 3']
 
-export const FOUNTAIN = { x: 0, z: 0, r: 3.6 }
+export const CHRISTMAS = { x: 0, z: 0, r: 2.7 }
+
+const LONG = 112
+const H = STREET_HALF
+
+export const STREETS = [
+  { x: 0, z: -24, halfX: LONG, halfZ: 8 },
+  { x: 0, z: 24, halfX: LONG, halfZ: 8 },
+  { x: 0, z: -58, halfX: LONG, halfZ: H },
+  { x: 0, z: 58, halfX: LONG, halfZ: H },
+  { x: 0, z: -88, halfX: LONG, halfZ: H },
+  { x: 0, z: 88, halfX: LONG, halfZ: H },
+  { x: -66, z: 0, halfX: H, halfZ: LONG },
+  { x: 66, z: 0, halfX: H, halfZ: LONG },
+  { x: -94, z: 0, halfX: H, halfZ: LONG },
+  { x: 94, z: 0, halfX: H, halfZ: LONG },
+  { x: -50, z: 0, halfX: 18, halfZ: 10 },
+  { x: 50, z: 0, halfX: 18, halfZ: 10 },
+]
 
 export const BUILDINGS = [
-  { x: 0, z: -48, w: 16, d: 10, h: 9, color: '#e6d3ad' },
-  { x: 36, z: -40, w: 12, d: 10, h: 14, color: '#d07a52' },
-  { x: 68, z: 0, w: 10, d: 16, h: 16, color: '#7ea4c8' },
-  { x: 40, z: 36, w: 12, d: 10, h: 11, color: '#efe6d2' },
-  { x: -6, z: 44, w: 18, d: 10, h: 8, color: '#c9846a' },
-  { x: -70, z: 8, w: 10, d: 18, h: 13, color: '#8e9a78' },
-  { x: -46, z: -40, w: 12, d: 10, h: 10, color: '#d8b48a' },
-  { x: 62, z: 30, w: 11, d: 11, h: 12, color: '#b7c4ce' },
-  { x: -62, z: -28, w: 12, d: 12, h: 9, color: '#c46b4a' },
+  { x: -80, z: -73, w: 12, d: 9, h: 18, color: '#2a242c' },
+  { x: -40, z: -73, w: 10, d: 8, h: 11, color: '#243044' },
+  { x: 0, z: -73, w: 14, d: 9, h: 22, color: '#3a2430' },
+  { x: 40, z: -73, w: 10, d: 8, h: 14, color: '#2c2830' },
+  { x: 80, z: -73, w: 12, d: 9, h: 16, color: '#1e3040' },
+  { x: -80, z: -43, w: 11, d: 8, h: 13, color: '#342830' },
+  { x: -40, z: -43, w: 10, d: 8, h: 20, color: '#243448' },
+  { x: 0, z: -43, w: 12, d: 8, h: 26, color: '#3a2834' },
+  { x: 40, z: -43, w: 10, d: 8, h: 15, color: '#2a3038' },
+  { x: 80, z: -43, w: 11, d: 8, h: 12, color: '#243040' },
+  { x: -80, z: 0, w: 10, d: 12, h: 24, color: '#2e2434' },
+  { x: 80, z: 0, w: 10, d: 12, h: 21, color: '#1c3044' },
+  { x: -80, z: 43, w: 11, d: 8, h: 12, color: '#322830' },
+  { x: -40, z: 43, w: 10, d: 8, h: 17, color: '#243848' },
+  { x: 0, z: 43, w: 12, d: 8, h: 28, color: '#3c2432' },
+  { x: 40, z: 43, w: 10, d: 8, h: 19, color: '#2a323c' },
+  { x: 80, z: 43, w: 11, d: 8, h: 14, color: '#203044' },
+  { x: -80, z: 73, w: 12, d: 9, h: 15, color: '#2a242c' },
+  { x: -40, z: 73, w: 10, d: 8, h: 11, color: '#243044' },
+  { x: 0, z: 73, w: 14, d: 9, h: 23, color: '#3a2430' },
+  { x: 40, z: 73, w: 10, d: 8, h: 16, color: '#2c2830' },
+  { x: 80, z: 73, w: 12, d: 9, h: 13, color: '#1e3040' },
 ]
 
 export const TREES = [
-  { x: 8, z: 2, s: 1.05 },
-  { x: -7, z: 4, s: 0.9 },
-  { x: 2, z: -8, s: 1.15 },
-  { x: -4, z: -6, s: 1 },
-  { x: 6, z: -5, s: 0.85 },
-  { x: -8, z: -2, s: 1.1 },
-  { x: 20, z: -52, s: 1.25 },
-  { x: -22, z: -54, s: 1.1 },
-  { x: 52, z: -24, s: 1.35 },
-  { x: 82, z: 16, s: 1.2 },
-  { x: 52, z: 50, s: 1.4 },
-  { x: 8, z: 58, s: 1.15 },
-  { x: -30, z: 54, s: 1.3 },
-  { x: -84, z: 26, s: 1.35 },
-  { x: -86, z: -12, s: 1.1 },
-  { x: -36, z: -56, s: 1.25 },
-  { x: 28, z: 60, s: 1 },
-  { x: 74, z: -38, s: 1.2 },
+  { x: -22, z: -43, s: 1.15 },
+  { x: 22, z: -43, s: 1 },
+  { x: -22, z: 43, s: 1.2 },
+  { x: 22, z: 43, s: 0.95 },
+  { x: -58, z: -43, s: 1.25 },
+  { x: 58, z: 43, s: 1.15 },
+  { x: -108, z: -46, s: 1.3 },
+  { x: 108, z: 44, s: 1.2 },
+  { x: -18, z: -100, s: 1.35 },
+  { x: 24, z: 102, s: 1.15 },
 ]
 
 export function boundingRadius(w, d) {
@@ -105,8 +129,19 @@ export function distToCenterline(x, z) {
   return Math.abs(Math.hypot(x - cx, z) - RADIUS)
 }
 
-export function isOnRoad(x, z) {
+export function isOnOval(x, z) {
   return distToCenterline(x, z) <= HALF_WIDTH
+}
+
+export function isOnStreet(x, z) {
+  for (const street of STREETS) {
+    if (Math.abs(x - street.x) <= street.halfX && Math.abs(z - street.z) <= street.halfZ) return true
+  }
+  return false
+}
+
+export function isOnRoad(x, z) {
+  return isOnOval(x, z) || isOnStreet(x, z)
 }
 
 export function yawForHeading(heading) {

@@ -48,6 +48,7 @@ function frame(now) {
   const dt = Math.min(0.033, (now - last) / 1000)
   last = now
   game.update(dt)
+  world.update(dt, car.pose.x, car.pose.z)
   if (game.view() === 'soccer') {
     renderer.render(soccer.scene, soccer.camera)
   } else {

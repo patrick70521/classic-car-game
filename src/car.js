@@ -25,7 +25,7 @@ export function createCar(scene) {
   const lampMat = new THREE.MeshStandardMaterial({
     color: '#fff4cf',
     emissive: '#ffe7a3',
-    emissiveIntensity: 0.55,
+    emissiveIntensity: 1.4,
     roughness: 0.35,
   })
 
@@ -51,6 +51,14 @@ export function createCar(scene) {
   addBox(1.92, 0.16, 0.16, 0, 0.42, -2.08, chrome)
   addBox(0.28, 0.16, 0.08, 0.62, 0.72, 2.08, lampMat)
   addBox(0.28, 0.16, 0.08, -0.62, 0.72, 2.08, lampMat)
+  const headlight = new THREE.SpotLight('#fff4d2', 18, 42, 0.62, 0.42, 1.1)
+  headlight.position.set(0, 1.15, 1.5)
+  const headTarget = new THREE.Object3D()
+  headTarget.position.set(0, 0.15, 18)
+  const nose = new THREE.PointLight('#fff1c9', 1.4, 9, 2)
+  nose.position.set(0, 1.05, 1.7)
+  root.add(headlight, headTarget, nose)
+  headlight.target = headTarget
   addBox(0.32, 0.16, 0.08, 0.62, 0.72, -2.08, tailMat)
   addBox(0.32, 0.16, 0.08, -0.62, 0.72, -2.08, tailMat)
 
