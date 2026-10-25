@@ -18,14 +18,15 @@ export function createCar(scene) {
   headlight.target = headTarget
 
   const styles = {
-    cyber: buildCybertruck(),
-    lambo: buildLamborghini(),
-    ferrari: buildFerrari(),
+    cyber: buildCarBody('cyber'),
+    lambo: buildCarBody('lambo'),
+    ferrari: buildCarBody('ferrari'),
+    bmw: buildCarBody('bmw'),
+    porsche: buildCarBody('porsche'),
   }
-  root.add(styles.cyber.group, styles.lambo.group, styles.ferrari.group)
+  root.add(styles.cyber.group, styles.lambo.group, styles.ferrari.group, styles.bmw.group, styles.porsche.group)
   let style = 'cyber'
-  styles.lambo.group.visible = false
-  styles.ferrari.group.visible = false
+  for (const key of Object.keys(styles)) styles[key].group.visible = key === style
   const home = scene
   let parked = false
 
@@ -158,6 +159,19 @@ export function createCar(scene) {
   }
 
   return { pose, update, reset, setStyle, setColor, mount }
+}
+
+const BUILDERS = {
+  cyber: buildCybertruck,
+  lambo: buildLamborghini,
+  ferrari: buildFerrari,
+  bmw: buildBmw,
+  porsche: buildPorsche,
+}
+
+export function buildCarBody(id) {
+  const build = BUILDERS[id]
+  return build ? build() : null
 }
 
 function buildCybertruck() {
@@ -317,6 +331,120 @@ function buildFerrari() {
     makeWheel(group, -0.98, -1.25, false, 0.33, black),
   ]
   return { group, wheels, tail, paint: red, wheelRadius: 0.33 }
+}
+
+function buildBmw() {
+  const group = new THREE.Group()
+  const blue = new THREE.MeshStandardMaterial({ color: '#1d4ed8', roughness: 0.34, metalness: 0.45 })
+  const black = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.55, metalness: 0.08 })
+  const glass = new THREE.MeshStandardMaterial({ color: '#1c242c', roughness: 0.08, metalness: 0.4 })
+  const lamp = new THREE.MeshStandardMaterial({
+    color: '#fff4cf',
+    emissive: '#ffe7a3',
+    emissiveIntensity: 1.4,
+    roughness: 0.35,
+  })
+  const tail = new THREE.MeshStandardMaterial({
+    color: '#ff3b30',
+    emissive: '#ff2a22',
+    emissiveIntensity: 0.4,
+    roughness: 0.4,
+  })
+
+  function addBox(w, h, d, x, y, z, material) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+    mesh.position.set(x, y, z)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    group.add(mesh)
+    return mesh
+  }
+
+  addBox(1.9, 0.48, 4.35, 0, 0.52, 0, blue)
+  addBox(1.78, 0.12, 1.25, 0, 0.8, 1.25, blue)
+  addBox(1.72, 0.46, 2.05, 0, 0.96, -0.2, blue)
+  addBox(1.7, 0.14, 0.72, 0, 0.82, -1.72, blue)
+  const windshield = addBox(1.58, 0.42, 0.06, 0, 1.02, 0.78, glass)
+  windshield.rotation.x = -0.48
+  addBox(1.42, 0.28, 0.05, 0, 1.05, -1.18, glass)
+  addBox(1.2, 0.28, 0.08, 0, 0.5, 2.16, black)
+  addBox(0.08, 0.32, 0.06, 0, 0.52, 2.2, blue)
+  addBox(0.38, 0.12, 0.08, 0.64, 0.58, 2.1, lamp)
+  addBox(0.38, 0.12, 0.08, -0.64, 0.58, 2.1, lamp)
+  for (const x of [0.58, 0.34, -0.34, -0.58]) {
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), tail)
+    bulb.position.set(x, 0.58, -2.12)
+    bulb.castShadow = true
+    group.add(bulb)
+  }
+
+  const wheels = [
+    makeWheel(group, 0.98, 1.42, true, 0.38, black),
+    makeWheel(group, -0.98, 1.42, true, 0.38, black),
+    makeWheel(group, 0.98, -1.42, false, 0.38, black),
+    makeWheel(group, -0.98, -1.42, false, 0.38, black),
+  ]
+  return { group, wheels, tail, paint: blue, wheelRadius: 0.38 }
+}
+
+function buildPorsche() {
+  const group = new THREE.Group()
+  const white = new THREE.MeshStandardMaterial({ color: '#f4f4f4', roughness: 0.28, metalness: 0.35 })
+  const black = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.55, metalness: 0.08 })
+  const glass = new THREE.MeshStandardMaterial({ color: '#1c242c', roughness: 0.08, metalness: 0.4 })
+  const lamp = new THREE.MeshStandardMaterial({
+    color: '#fff4cf',
+    emissive: '#ffe7a3',
+    emissiveIntensity: 1.4,
+    roughness: 0.35,
+  })
+  const tail = new THREE.MeshStandardMaterial({
+    color: '#ff3b30',
+    emissive: '#ff2a22',
+    emissiveIntensity: 0.4,
+    roughness: 0.4,
+  })
+
+  function addBox(w, h, d, x, y, z, material) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+    mesh.position.set(x, y, z)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    group.add(mesh)
+    return mesh
+  }
+
+  addBox(1.88, 0.36, 3.85, 0, 0.42, -0.05, white)
+  addBox(1.55, 0.16, 1.15, 0, 0.62, 0.55, white)
+  addBox(1.35, 0.22, 1.15, 0, 0.72, -0.25, white)
+  const windshield = addBox(1.22, 0.34, 0.06, 0, 0.78, 0.28, glass)
+  windshield.rotation.x = -0.72
+  addBox(1.15, 0.22, 0.05, 0, 0.74, -0.78, glass)
+  const deck = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), white)
+  deck.scale.set(1.55, 0.42, 1.05)
+  deck.position.set(0, 0.58, -1.25)
+  deck.castShadow = true
+  group.add(deck)
+  for (const x of [0.55, -0.55]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), lamp)
+    eye.scale.set(1.7, 0.7, 0.55)
+    eye.position.set(x, 0.5, 1.82)
+    group.add(eye)
+  }
+  for (const x of [0.62, -0.62]) {
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), tail)
+    bulb.scale.set(1.4, 0.7, 0.6)
+    bulb.position.set(x, 0.48, -1.82)
+    group.add(bulb)
+  }
+
+  const wheels = [
+    makeWheel(group, 0.96, 1.22, true, 0.34, black),
+    makeWheel(group, -0.96, 1.22, true, 0.34, black),
+    makeWheel(group, 0.96, -1.28, false, 0.34, black),
+    makeWheel(group, -0.96, -1.28, false, 0.34, black),
+  ]
+  return { group, wheels, tail, paint: white, wheelRadius: 0.34 }
 }
 
 function makeWheel(parent, x, z, front, radius, accent) {

@@ -9,6 +9,8 @@ const CARS = [
   { id: 'cyber', label: 'CYBERTRUCK' },
   { id: 'lambo', label: 'LAMBORGHINI' },
   { id: 'ferrari', label: 'FERRARI' },
+  { id: 'bmw', label: 'BMW M5' },
+  { id: 'porsche', label: 'PORSCHE 911' },
 ]
 
 const COLORS = [
@@ -32,7 +34,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
   let sideHold = 0
   let colorHold = 0
   let pendingMode = 'free'
-  const colorPick = { cyber: 0, lambo: 2, ferrari: 1 }
+  const colorPick = { cyber: 0, lambo: 2, ferrari: 1, bmw: 5, porsche: 3 }
   let nextCp = 1
   let laps = 0
   let raceMs = 0
@@ -97,7 +99,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     state = 'pick-car'
     sideHold = 0
     colorHold = 0
-    car.mount(garage.turntable)
+    for (const item of CARS) garage.paint(item.id, COLORS[colorPick[item.id]].hex)
     showCar()
   }
 
@@ -105,12 +107,15 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     const id = CARS[carPick].id
     car.setStyle(id)
     car.setColor(COLORS[colorPick[id]].hex)
+    garage.focus(carPick)
   }
 
   function shiftColor(dir) {
     const id = CARS[carPick].id
     colorPick[id] = (colorPick[id] + dir + COLORS.length) % COLORS.length
-    car.setColor(COLORS[colorPick[id]].hex)
+    const hex = COLORS[colorPick[id]].hex
+    car.setColor(hex)
+    garage.paint(id, hex)
   }
 
   function distanceTo(index) {
