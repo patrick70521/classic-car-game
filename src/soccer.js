@@ -145,7 +145,7 @@ export function createSoccer() {
   }
 
   function movePlayer(dt, input) {
-    const ix = (input.held.right ? 1 : 0) - (input.held.left ? 1 : 0)
+    const ix = (input.held.left ? 1 : 0) - (input.held.right ? 1 : 0)
     const iz = (input.held.up ? 1 : 0) - (input.held.down ? 1 : 0)
     const len = Math.hypot(ix, iz)
     if (len > 0) {

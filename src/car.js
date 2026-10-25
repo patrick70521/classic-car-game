@@ -143,7 +143,7 @@ export function createCar(scene) {
   }
 
   function update(dt, input, world) {
-    const steerInput = (input.held.left ? 1 : 0) - (input.held.right ? 1 : 0)
+    const steerInput = (input.held.right ? 1 : 0) - (input.held.left ? 1 : 0)
     const throttle = input.held.up && !input.held.down
     const braking = input.held.down
     pose.onRoad = world.isOnRoad(pose.x, pose.z)
