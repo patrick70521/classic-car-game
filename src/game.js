@@ -355,7 +355,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
 
   function render() {
     const driving = state === 'play' && mode !== 'soccer'
-    engine.update(driving, car.pose.speed)
+    engine.update(driving, car.pose.speed, world.ambience())
     input.setStickEnabled(onTrack())
     document.body.classList.toggle('has-joystick', onTrack())
     const mph = Math.round(Math.abs(car.pose.speed) * 4)

@@ -96,6 +96,9 @@ export function createCar(scene) {
 
   function resolveObstacles(world) {
     for (const obstacle of world.colliders) pushCircle(obstacle.x, obstacle.z, obstacle.r)
+    if (world.movers) {
+      for (const obstacle of world.movers) pushCircle(obstacle.x, obstacle.z, obstacle.r)
+    }
     const limit = world.limit
     if (Math.abs(pose.x) > limit || Math.abs(pose.z) > limit) {
       pose.x = Math.max(-limit, Math.min(limit, pose.x))
