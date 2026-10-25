@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import './shell.css'
 import { createChaseCamera } from './camera.js'
 import { createCar } from './car.js'
+import { createEngine } from './engine.js'
 import { createGame } from './game.js'
 import { createGarage } from './garage.js'
 import { createInput } from './input.js'
@@ -29,7 +30,8 @@ const chase = createChaseCamera(camera)
 const soccer = createSoccer()
 const garage = createGarage()
 const input = createInput(document.getElementById('device'))
-const game = createGame({ input, car, world, chase, hud, soccer, garage })
+const engine = createEngine()
+const game = createGame({ input, car, world, chase, hud, soccer, garage, engine })
 
 function resize() {
   const width = Math.max(1, screen.clientWidth)

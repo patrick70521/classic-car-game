@@ -105,9 +105,13 @@ export function createCar(scene) {
   }
 
   function update(dt, input, world) {
-    const steerInput = (input.held.right ? 1 : 0) - (input.held.left ? 1 : 0)
-    const throttle = input.held.up && !input.held.down
-    const braking = input.held.down
+    const stick = input.stick
+    const usingStick = Boolean(stick && stick.active)
+    const steerInput = usingStick ? stick.x : (input.held.right ? 1 : 0) - (input.held.left ? 1 : 0)
+    const forward = usingStick ? Math.max(0, stick.y) : (input.held.up && !input.held.down ? 1 : 0)
+    const back = usingStick ? Math.max(0, -stick.y) : (input.held.down ? 1 : 0)
+    const throttle = forward > 0.05
+    const braking = back > 0.05
     pose.onRoad = world.isOnRoad(pose.x, pose.z)
 
     const maxForward = pose.onRoad ? 18 : 7.5
@@ -115,20 +119,22 @@ export function createCar(scene) {
     const engine = pose.onRoad ? 11 : 6
     const drag = pose.onRoad ? 0.4 : 1.7
 
-    if (throttle) pose.speed += engine * dt
+    if (throttle) pose.speed += engine * forward * dt
     else if (braking) {
-      if (pose.speed > 0.45) pose.speed -= 24 * dt
-      else pose.speed -= engine * 0.75 * dt
+      if (pose.speed > 0.45) pose.speed -= 24 * back * dt
+      else pose.speed -= engine * 0.75 * back * dt
     } else {
       pose.speed -= pose.speed * drag * dt
       if (Math.abs(pose.speed) < 0.12) pose.speed = 0
     }
 
-    if (pose.speed > maxForward) {
-      if (pose.onRoad) pose.speed = maxForward
-      else pose.speed = Math.max(maxForward, pose.speed - 12 * dt)
+    const forwardCap = usingStick && throttle ? maxForward * forward : maxForward
+    const reverseCap = usingStick && braking ? maxReverse * back : maxReverse
+    if (pose.speed > forwardCap) {
+      if (pose.onRoad || usingStick) pose.speed = forwardCap
+      else pose.speed = Math.max(forwardCap, pose.speed - 12 * dt)
     }
-    if (pose.speed < -maxReverse) pose.speed = -maxReverse
+    if (pose.speed < -reverseCap) pose.speed = -reverseCap
 
     if (Math.abs(pose.speed) > 0.35) {
       const speedFactor = Math.min(Math.abs(pose.speed) / 18, 1)

@@ -1,3 +1,8 @@
+const DEVICES = [
+  { id: 'mobile', label: 'MOBILE' },
+  { id: 'computer', label: 'COMPUTER' },
+]
+
 const DISPLAYS = [
   { id: 'full', label: 'FULL SCREEN' },
   { id: 'supreme', label: 'SUPREME' },
@@ -30,9 +35,12 @@ const COLORS = [
 const BEST_KEY = 'classic-car-best-ms'
 const RACE_LAPS = 3
 
-export function createGame({ input, car, world, chase, hud, soccer, garage }) {
-  let state = 'display'
+export function createGame({ input, car, world, chase, hud, soccer, garage, engine }) {
+  let state = 'device'
   let mode = 'free'
+  let playerDevice = 'computer'
+  let devicePick = 0
+  let deviceHold = 0
   let displayPick = 0
   let displayHold = 0
   let selection = 0
@@ -101,11 +109,24 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     }
   }
 
+  function onTrack() {
+    return playerDevice === 'mobile' && (state === 'play' || state === 'pause') && mode !== 'soccer'
+  }
+
+  function goDevice() {
+    state = 'device'
+    freshRun('free')
+    world.setActive(-1)
+    applyShell(false)
+    input.setStickEnabled(false)
+  }
+
   function goDisplay() {
     state = 'display'
     freshRun('free')
     world.setActive(-1)
     applyShell(false)
+    input.setStickEnabled(false)
   }
 
   function goMenu() {
@@ -196,7 +217,28 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     }
 
     if (edge.reset) {
-      goDisplay()
+      goDevice()
+      render()
+      return
+    }
+
+    if (state === 'device') {
+      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (dir === 0) deviceHold = 0
+      else if (edge.up || edge.down) {
+        devicePick = (devicePick + dir + DEVICES.length) % DEVICES.length
+        deviceHold = 0
+      } else {
+        deviceHold += dt
+        if (deviceHold > 0.42) {
+          devicePick = (devicePick + dir + DEVICES.length) % DEVICES.length
+          deviceHold = 0.22
+        }
+      }
+      if (edge.a) {
+        playerDevice = DEVICES[devicePick].id
+        state = 'display'
+      }
       render()
       return
     }
@@ -218,6 +260,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
         applyShell(DISPLAYS[displayPick].id === 'full')
         state = 'menu'
       }
+      if (edge.b || edge.select) goDevice()
       render()
       return
     }
@@ -311,13 +354,27 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
   }
 
   function render() {
+    const driving = state === 'play' && mode !== 'soccer'
+    engine.update(driving, car.pose.speed)
+    input.setStickEnabled(onTrack())
+    document.body.classList.toggle('has-joystick', onTrack())
     const mph = Math.round(Math.abs(car.pose.speed) * 4)
+    if (state === 'device') {
+      hud.innerHTML = `
+        <div class="menu">
+          <div class="title">PICK<br>DEVICE</div>
+          ${DEVICES.map((item, index) => `<div class="item${index === devicePick ? ' sel' : ''}">${item.label}</div>`).join('')}
+          <div class="hint">UP DOWN<br>A TO START</div>
+        </div>`
+      return
+    }
+
     if (state === 'display') {
       hud.innerHTML = `
         <div class="menu">
           <div class="title">PICK<br>SCREEN</div>
           ${DISPLAYS.map((item, index) => `<div class="item${index === displayPick ? ' sel' : ''}">${item.label}</div>`).join('')}
-          <div class="hint">UP DOWN<br>A TO START</div>
+          <div class="hint">UP DOWN<br>A TO START<br>B BACK</div>
         </div>`
       return
     }
@@ -420,7 +477,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage }) {
     if (state === 'menu') applyShell(false)
   })
 
-  goDisplay()
+  goDevice()
   return {
     update,
     view() {
