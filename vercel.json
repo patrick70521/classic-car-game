@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/room.mjs": {
+      "maxDuration": 300
+    }
+  }
+}

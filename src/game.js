@@ -1,3 +1,5 @@
+import { createRoom } from './room.js'
+
 const DEVICES = [
   { id: 'mobile', label: 'MOBILE' },
   { id: 'computer', label: 'COMPUTER' },
@@ -34,6 +36,15 @@ const COLORS = [
 
 const BEST_KEY = 'classic-car-best-ms'
 const RACE_LAPS = 3
+const CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+const SOCCER_KIND = [
+  { id: 'cpu', label: 'VS COMPUTER' },
+  { id: 'private', label: 'PRIVATE MATCH' },
+]
+const SOCCER_ROOM = [
+  { id: 'host', label: 'HOST GAME' },
+  { id: 'join', label: 'JOIN WITH CODE' },
+]
 
 export function createGame({ input, car, world, chase, hud, soccer, garage, engine }) {
   let state = 'device'
@@ -61,6 +72,20 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
   let finished = false
   let newBest = false
   let waitExit = false
+  let kindPick = 0
+  let kindHold = 0
+  let roomPick = 0
+  let roomHold = 0
+  let codeSlot = 0
+  let slotHold = 0
+  let letterHold = 0
+  const codeSlots = [0, 0, 0, 0]
+  let roomCode = ''
+  let joinError = ''
+  let link = ''
+  let started = false
+  let netSend = 0
+  let pauseArm = false
 
   function readBest() {
     try {
@@ -113,7 +138,19 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
     return playerDevice === 'mobile' && (state === 'play' || state === 'pause') && mode !== 'soccer'
   }
 
+  function leaveMatch() {
+    started = false
+    link = ''
+    joinError = ''
+    roomCode = ''
+    pauseArm = false
+    netSend = 0
+    room.leave()
+    soccer.endOnline()
+  }
+
   function goDevice() {
+    leaveMatch()
     state = 'device'
     freshRun('free')
     world.setActive(-1)
@@ -122,6 +159,7 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
   }
 
   function goDisplay() {
+    leaveMatch()
     state = 'display'
     freshRun('free')
     world.setActive(-1)
@@ -130,16 +168,35 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
   }
 
   function goMenu() {
+    leaveMatch()
     state = 'menu'
     freshRun('free')
     world.setActive(-1)
   }
 
+  function startSoloSoccer() {
+    state = 'play'
+    freshRun('soccer')
+    soccer.endOnline()
+    soccer.reset()
+  }
+
+  function startOnline(role) {
+    if (started) return
+    if (state !== 'soccer-host' && state !== 'soccer-join' && state !== 'play' && state !== 'pause') return
+    started = true
+    link = ''
+    state = 'play'
+    freshRun('soccer')
+    soccer.beginOnline(role)
+    soccer.reset()
+  }
+
   function startMode(id) {
     if (id === 'soccer') {
-      state = 'play'
-      freshRun(id)
-      soccer.reset()
+      state = 'soccer-kind'
+      kindPick = 0
+      kindHold = 0
       return
     }
     pendingMode = id
@@ -284,6 +341,110 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
       return
     }
 
+    if (state === 'soccer-kind') {
+      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (dir === 0) kindHold = 0
+      else if (edge.up || edge.down) {
+        kindPick = (kindPick + dir + SOCCER_KIND.length) % SOCCER_KIND.length
+        kindHold = 0
+      } else {
+        kindHold += dt
+        if (kindHold > 0.42) {
+          kindPick = (kindPick + dir + SOCCER_KIND.length) % SOCCER_KIND.length
+          kindHold = 0.22
+        }
+      }
+      if (edge.a) {
+        if (SOCCER_KIND[kindPick].id === 'cpu') startSoloSoccer()
+        else {
+          state = 'soccer-room'
+          roomPick = 0
+          roomHold = 0
+        }
+      }
+      if (edge.b || edge.select) goMenu()
+      render()
+      return
+    }
+
+    if (state === 'soccer-room') {
+      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (dir === 0) roomHold = 0
+      else if (edge.up || edge.down) {
+        roomPick = (roomPick + dir + SOCCER_ROOM.length) % SOCCER_ROOM.length
+        roomHold = 0
+      } else {
+        roomHold += dt
+        if (roomHold > 0.42) {
+          roomPick = (roomPick + dir + SOCCER_ROOM.length) % SOCCER_ROOM.length
+          roomHold = 0.22
+        }
+      }
+      if (edge.a) {
+        if (SOCCER_ROOM[roomPick].id === 'host') {
+          state = 'soccer-host'
+          roomCode = ''
+          link = ''
+          room.host()
+        } else {
+          state = 'soccer-join'
+          codeSlot = 0
+          joinError = ''
+        }
+      }
+      if (edge.b || edge.select) {
+        state = 'soccer-kind'
+      }
+      render()
+      return
+    }
+
+    if (state === 'soccer-host') {
+      if (edge.b || edge.select) {
+        leaveMatch()
+        state = 'soccer-room'
+      }
+      render()
+      return
+    }
+
+    if (state === 'soccer-join') {
+      const side = (input.held.right ? 1 : 0) - (input.held.left ? 1 : 0)
+      if (side === 0) slotHold = 0
+      else if (edge.left || edge.right) {
+        codeSlot = (codeSlot + side + codeSlots.length) % codeSlots.length
+        slotHold = 0
+      } else {
+        slotHold += dt
+        if (slotHold > 0.42) {
+          codeSlot = (codeSlot + side + codeSlots.length) % codeSlots.length
+          slotHold = 0.22
+        }
+      }
+      const dir = (input.held.down ? 1 : 0) - (input.held.up ? 1 : 0)
+      if (dir === 0) letterHold = 0
+      else if (edge.up || edge.down) {
+        codeSlots[codeSlot] = (codeSlots[codeSlot] + dir + CODE_CHARS.length) % CODE_CHARS.length
+        letterHold = 0
+      } else {
+        letterHold += dt
+        if (letterHold > 0.42) {
+          codeSlots[codeSlot] = (codeSlots[codeSlot] + dir + CODE_CHARS.length) % CODE_CHARS.length
+          letterHold = 0.22
+        }
+      }
+      if (edge.a) {
+        joinError = ''
+        room.join(codeSlots.map((index) => CODE_CHARS[index]).join(''))
+      }
+      if (edge.b || edge.select) {
+        leaveMatch()
+        state = 'soccer-room'
+      }
+      render()
+      return
+    }
+
     if (edge.b || edge.select) {
       goMenu()
       render()
@@ -329,8 +490,38 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
       return
     }
 
-    if (edge.start) state = state === 'pause' ? 'play' : 'pause'
-    if (state === 'pause') {
+    const online = mode === 'soccer' && soccer.isOnline()
+    if (!online && edge.start) state = state === 'pause' ? 'play' : 'pause'
+    if (state === 'pause' && !online) {
+      render()
+      return
+    }
+
+    if (online) {
+      if (edge.start) {
+        if (soccer.isHost()) soccer.togglePause()
+        else pauseArm = true
+      }
+      netSend += dt
+      if (soccer.isGuest() && (netSend >= 0.05 || edge.a || pauseArm)) {
+        netSend = 0
+        room.send({
+          t: 'in',
+          l: input.held.left ? 1 : 0,
+          r: input.held.right ? 1 : 0,
+          u: input.held.up ? 1 : 0,
+          d: input.held.down ? 1 : 0,
+          k: edge.a ? 1 : 0,
+          p: pauseArm ? 1 : 0,
+        })
+        pauseArm = false
+      }
+      if (soccer.isHost() && netSend >= 0.05) {
+        netSend = 0
+        room.send(soccer.snapshot())
+      }
+      soccer.update(dt, input, edge.a)
+      if (link !== 'lost') state = soccer.netPaused() ? 'pause' : 'play'
       render()
       return
     }
@@ -389,6 +580,56 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
       return
     }
 
+    if (state === 'soccer-kind') {
+      hud.innerHTML = `
+        <div class="menu">
+          <div class="title">SOCCER</div>
+          ${SOCCER_KIND.map((item, index) => `<div class="item${index === kindPick ? ' sel' : ''}">${item.label}</div>`).join('')}
+          <div class="hint">UP DOWN<br>A TO START<br>B MENU</div>
+        </div>`
+      return
+    }
+
+    if (state === 'soccer-room') {
+      hud.innerHTML = `
+        <div class="menu">
+          <div class="title">PRIVATE</div>
+          ${SOCCER_ROOM.map((item, index) => `<div class="item${index === roomPick ? ' sel' : ''}">${item.label}</div>`).join('')}
+          <div class="hint">UP DOWN<br>A TO START<br>B BACK</div>
+        </div>`
+      return
+    }
+
+    if (state === 'soccer-host') {
+      const banner = link === 'lost'
+        ? 'LINK LOST'
+        : link === 'reconnecting'
+          ? 'RECONNECTING'
+          : roomCode
+            ? roomCode
+            : 'CONNECTING'
+      hud.innerHTML = `
+        <div class="menu">
+          <div class="title">YOUR CODE</div>
+          <div class="code">${banner}</div>
+          <div class="hint">${link === 'lost' ? 'B BACK' : 'WAITING<br>B BACK'}</div>
+        </div>`
+      return
+    }
+
+    if (state === 'soccer-join') {
+      const letters = codeSlots
+        .map((index, place) => `<span class="${place === codeSlot ? 'on' : ''}">${CODE_CHARS[index]}</span>`)
+        .join('')
+      hud.innerHTML = `
+        <div class="menu">
+          <div class="title">${joinError || 'ENTER CODE'}</div>
+          <div class="code">${letters}</div>
+          <div class="hint">LEFT RIGHT<br>UP DOWN<br>A JOIN<br>B BACK</div>
+        </div>`
+      return
+    }
+
     if (state === 'pick-car') {
       const id = CARS[carPick].id
       hud.innerHTML = `
@@ -404,16 +645,27 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
       const { you, them, message } = soccer.status()
       const board = `<div class="stats">YOU ${you}<br>THEM ${them}</div><div class="speed">A KICK</div>`
       if (state === 'pause') {
+        const linkBanner = link === 'lost'
+          ? `<div class="menu"><div class="title">LINK LOST</div><div class="hint">B MENU</div></div>`
+          : link === 'reconnecting'
+            ? `<div class="menu"><div class="title">RECONNECTING</div></div>`
+            : ''
         hud.innerHTML = `
           ${board}
           <div class="menu">
             <div class="title">PAUSED</div>
             <div class="hint">START RESUME<br>B MENU</div>
-          </div>`
+          </div>
+          ${linkBanner}`
         return
       }
       const banner = message ? `<div class="menu"><div class="title">${message}</div></div>` : ''
-      hud.innerHTML = board + banner
+      const linkBanner = link === 'lost'
+        ? `<div class="menu"><div class="title">LINK LOST</div><div class="hint">B MENU</div></div>`
+        : link === 'reconnecting'
+          ? `<div class="menu"><div class="title">RECONNECTING</div></div>`
+          : ''
+      hud.innerHTML = board + banner + linkBanner
       return
     }
 
@@ -475,6 +727,38 @@ export function createGame({ input, car, world, chase, hud, soccer, garage, engi
   })
   document.querySelector('[data-btn="b"]')?.addEventListener('pointerdown', () => {
     if (state === 'menu') applyShell(false)
+  })
+
+  const room = createRoom({
+    onCode(code) {
+      roomCode = code
+      render()
+    },
+    onReady() {
+      startOnline(room.role())
+    },
+    onInput(msg) {
+      soccer.pushRemote(msg)
+    },
+    onState(msg) {
+      soccer.pushState(msg)
+    },
+    onLeft() {
+      link = 'lost'
+      render()
+    },
+    onError(reason) {
+      joinError = reason
+      if (started) link = 'lost'
+      render()
+    },
+    onStatus(next) {
+      if (next === 'live' || next === 'waiting') link = ''
+      else if (next === 'reconnecting') link = 'reconnecting'
+      else if (next === 'lost') link = 'lost'
+      else if (next === 'error') link = ''
+      render()
+    },
   })
 
   goDevice()

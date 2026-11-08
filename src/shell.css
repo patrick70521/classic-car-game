@@ -140,6 +140,16 @@ body {
   margin-bottom: 0.45em;
 }
 
+.code {
+  color: #ffe56a;
+  text-align: center;
+  font-size: 1.6em;
+  letter-spacing: 0.18em;
+  margin: 0.2em 0 0.35em;
+}
+
+.code .on { color: #fff; }
+
 .item { color: #e7e7e7; }
 .item.sel { color: #ffe56a; }
 .item.sel::before { content: "> "; }

@@ -48,7 +48,7 @@ export function createSoccer() {
   addGoal(scene, -1)
 
   const player = { x: 0, z: -8, heading: 0, vx: 0, vz: 0 }
-  const ai = { x: 0, z: 10, heading: Math.PI }
+  const ai = { x: 0, z: 10, heading: Math.PI, vx: 0, vz: 0 }
   const keeperFar = { x: 0, z: HALF_L - 2.2, heading: Math.PI }
   const keeperNear = { x: 0, z: -HALF_L + 2.2, heading: 0 }
   const ball = { x: 0, y: BALL_R, z: -6.2, vx: 0, vy: 0, vz: 0 }
@@ -80,6 +80,15 @@ export function createSoccer() {
   let kickLock = 0
   let clock = 0
   let snap = true
+  let online = null
+  let netPause = false
+  let scorer = ''
+  let remoteIx = 0
+  let remoteIz = 0
+  let remoteKick = false
+  let remotePause = false
+  let remoteSeen = -10
+  let netState = null
 
   function resetPositions() {
     player.x = 0
@@ -90,6 +99,8 @@ export function createSoccer() {
     ai.x = 0
     ai.z = 11
     ai.heading = Math.PI
+    ai.vx = 0
+    ai.vz = 0
     keeperFar.x = 0
     keeperNear.x = 0
     ball.x = 0
@@ -107,59 +118,180 @@ export function createSoccer() {
     message = ''
     messageTime = 0
     kickLock = 0
+    scorer = ''
+    netPause = false
+    remoteIx = 0
+    remoteIz = 0
+    remoteKick = false
+    remotePause = false
+    remoteSeen = -10
+    netState = null
     resetPositions()
     sync(0)
     aimCamera(1)
   }
 
   function status() {
-    return { you, them, message }
+    return { you, them, message, paused: netPause }
+  }
+
+  function beginOnline(role) {
+    online = role
+    netPause = false
+    scorer = ''
+    snap = true
+  }
+
+  function endOnline() {
+    online = null
+    netPause = false
+    scorer = ''
+    netState = null
+  }
+
+  function pushRemote(msg) {
+    const ix = (msg.l ? 1 : 0) - (msg.r ? 1 : 0)
+    const iz = (msg.u ? 1 : 0) - (msg.d ? 1 : 0)
+    remoteIx = -ix
+    remoteIz = -iz
+    if (msg.k) remoteKick = true
+    if (msg.p) remotePause = true
+    remoteSeen = clock
+  }
+
+  function pushState(msg) {
+    netState = msg
+    if (!snap) return
+    applyNet(0, true)
+  }
+
+  function snapshot() {
+    return {
+      t: 'st',
+      p: pack(player),
+      o: pack(ai),
+      b: { x: round(ball.x), y: round(ball.y), z: round(ball.z) },
+      s: you,
+      n: them,
+      scorer,
+      pause: netPause ? 1 : 0,
+      kf: round(keeperFar.x),
+      kn: round(keeperNear.x),
+    }
+  }
+
+  function togglePause() {
+    if (online === 'host') netPause = !netPause
   }
 
   function update(dt, input, kick) {
+    if (online === 'guest') {
+      applyNet(dt, false)
+      return
+    }
     clock += dt
     kickLock = Math.max(0, kickLock - dt)
+    if (online === 'host' && clock - remoteSeen > 0.45) {
+      remoteIx = 0
+      remoteIz = 0
+    }
+    if (online === 'host' && remotePause) {
+      netPause = !netPause
+      remotePause = false
+    }
+    if (netPause) {
+      sync(dt)
+      aimCamera(dt, player, 1)
+      return
+    }
     if (messageTime > 0) {
       messageTime -= dt
       if (messageTime <= 0) {
         message = ''
+        scorer = ''
         resetPositions()
       }
       sync(0)
-      aimCamera(dt)
+      aimCamera(dt, player, 1)
       return
     }
 
     movePlayer(dt, input)
-    moveChaser(dt)
+    if (online === 'host') moveBody(ai, dt, remoteIx, remoteIz)
+    else moveChaser(dt)
     moveKeeper(keeperFar, 1, dt)
     moveKeeper(keeperNear, -1, dt)
     separate(player, ai)
-    if (kick) tryKick()
+    if (kick) tryKick(player)
+    if (online === 'host' && remoteKick) {
+      tryKick(ai)
+      remoteKick = false
+    }
     stepBall(dt)
     keepersTouchBall()
     containBall()
     checkGoal()
     sync(dt)
-    aimCamera(dt)
+    aimCamera(dt, player, 1)
+  }
+
+  function applyNet(dt, hard) {
+    if (!netState) return
+    clock += dt
+    const blend = hard ? 1 : 1 - Math.exp(-14 * dt)
+    const px = player.x
+    const pz = player.z
+    const ax = ai.x
+    const az = ai.z
+    const bx = ball.x
+    const bz = ball.z
+    glide(player, netState.p, blend)
+    glide(ai, netState.o, blend)
+    ball.x += (netState.b.x - ball.x) * blend
+    ball.y += (netState.b.y - ball.y) * blend
+    ball.z += (netState.b.z - ball.z) * blend
+    if (dt > 0 && !hard) {
+      player.vx = (player.x - px) / dt
+      player.vz = (player.z - pz) / dt
+      ai.vx = (ai.x - ax) / dt
+      ai.vz = (ai.z - az) / dt
+      ball.vx = (ball.x - bx) / dt
+      ball.vz = (ball.z - bz) / dt
+    }
+    if (typeof netState.kf === 'number') keeperFar.x = netState.kf
+    if (typeof netState.kn === 'number') keeperNear.x = netState.kn
+    you = netState.n
+    them = netState.s
+    scorer = netState.scorer || ''
+    if (scorer === 'north') message = 'GOAL'
+    else if (scorer === 'south') message = 'THEY SCORED'
+    else message = ''
+    netPause = netState.pause === 1
+    sync(dt)
+    aimCamera(dt, ai, -1)
+    snap = false
   }
 
   function movePlayer(dt, input) {
     const ix = (input.held.left ? 1 : 0) - (input.held.right ? 1 : 0)
     const iz = (input.held.up ? 1 : 0) - (input.held.down ? 1 : 0)
+    moveBody(player, dt, ix, iz)
+  }
+
+  function moveBody(body, dt, ix, iz) {
     const len = Math.hypot(ix, iz)
     if (len > 0) {
       const dx = ix / len
       const dz = iz / len
-      player.vx = dx * RUN
-      player.vz = dz * RUN
-      player.heading = lerpAngle(player.heading, Math.atan2(dx, dz), 1 - Math.exp(-14 * dt))
+      body.vx = dx * RUN
+      body.vz = dz * RUN
+      body.heading = lerpAngle(body.heading, Math.atan2(dx, dz), 1 - Math.exp(-14 * dt))
     } else {
-      player.vx *= Math.max(0, 1 - 14 * dt)
-      player.vz *= Math.max(0, 1 - 14 * dt)
+      body.vx *= Math.max(0, 1 - 14 * dt)
+      body.vz *= Math.max(0, 1 - 14 * dt)
     }
-    player.x = clamp(player.x + player.vx * dt, -HALF_W + 0.7, HALF_W - 0.7)
-    player.z = clamp(player.z + player.vz * dt, -HALF_L + 0.7, HALF_L - 0.7)
+    body.x = clamp(body.x + body.vx * dt, -HALF_W + 0.7, HALF_W - 0.7)
+    body.z = clamp(body.z + body.vz * dt, -HALF_L + 0.7, HALF_L - 0.7)
   }
 
   function moveChaser(dt) {
@@ -191,36 +323,37 @@ export function createSoccer() {
     keeper.heading = side > 0 ? Math.PI : 0
   }
 
-  function tryKick() {
-    const dist = flatDist(player, ball)
+  function tryKick(body) {
+    const dist = flatDist(body, ball)
     if (dist > 2 || ball.y > 1.5) return
-    const fx = Math.sin(player.heading)
-    const fz = Math.cos(player.heading)
-    ball.vx = fx * 18 + player.vx * 0.35
-    ball.vz = fz * 18 + player.vz * 0.35
+    const fx = Math.sin(body.heading)
+    const fz = Math.cos(body.heading)
+    ball.vx = fx * 18 + body.vx * 0.35
+    ball.vz = fz * 18 + body.vz * 0.35
     ball.vy = 7.2
     kickLock = 0.45
   }
 
+  function carryBall(dt, body) {
+    const dist = flatDist(body, ball)
+    const fx = Math.sin(body.heading)
+    const fz = Math.cos(body.heading)
+    const ahead = (ball.x - body.x) * fx + (ball.z - body.z) * fz
+    if (kickLock > 0 || dist >= 1.7 || ball.y >= 1.15 || ahead <= -0.55) return false
+    const lead = Math.max(1.05, Math.hypot(body.vx || 0, body.vz || 0) * 0.12)
+    const blend = Math.min(1, dt * 22)
+    ball.x += (body.x + fx * lead - ball.x) * blend
+    ball.z += (body.z + fz * lead - ball.z) * blend
+    ball.y = BALL_R
+    ball.vx = fx * Math.hypot(body.vx || 0, body.vz || 0)
+    ball.vz = fz * Math.hypot(body.vx || 0, body.vz || 0)
+    ball.vy = 0
+    return true
+  }
+
   function stepBall(dt) {
-    const playerDist = flatDist(player, ball)
-    const fx = Math.sin(player.heading)
-    const fz = Math.cos(player.heading)
-    const ahead = (ball.x - player.x) * fx + (ball.z - player.z) * fz
-    const dribbling = kickLock <= 0 && playerDist < 1.7 && ball.y < 1.15 && ahead > -0.55
-    if (dribbling) {
-      const lead = Math.max(1.05, Math.hypot(player.vx, player.vz) * 0.12)
-      const tx = player.x + fx * lead
-      const tz = player.z + fz * lead
-      const blend = Math.min(1, dt * 22)
-      ball.x += (tx - ball.x) * blend
-      ball.z += (tz - ball.z) * blend
-      ball.y = BALL_R
-      ball.vx = fx * Math.hypot(player.vx, player.vz)
-      ball.vz = fz * Math.hypot(player.vx, player.vz)
-      ball.vy = 0
-      return
-    }
+    if (carryBall(dt, player)) return
+    if (online === 'host' && carryBall(dt, ai)) return
 
     ball.vy -= 20 * dt
     ball.x += ball.vx * dt
@@ -245,7 +378,7 @@ export function createSoccer() {
     const dist = Math.hypot(dx, dz)
     if (dist > 0.8 || ball.y > 1.4) return
     const speed = Math.hypot(ball.vx, ball.vz)
-    if (flatDist(player, ball) < 1.3 && speed < 8) return
+    if (speed < 8 && (flatDist(player, ball) < 1.3 || (online === 'host' && flatDist(ai, ball) < 1.3))) return
     const nx = dx / (dist || 1)
     const nz = dz / (dist || 1)
     ball.x = keeper.x + nx * 0.95
@@ -307,8 +440,13 @@ export function createSoccer() {
   }
 
   function award(side) {
-    if (side === 'you') you += 1
-    else them += 1
+    if (side === 'you') {
+      you += 1
+      scorer = 'south'
+    } else {
+      them += 1
+      scorer = 'north'
+    }
     message = side === 'you' ? 'GOAL' : 'THEY SCORED'
     messageTime = 1.5
     ball.vx = 0
@@ -318,8 +456,9 @@ export function createSoccer() {
 
   function sync(dt) {
     const running = Math.hypot(player.vx, player.vz) > 0.8
+    const opponentRunning = online ? Math.hypot(ai.vx, ai.vz) > 0.8 : true
     placeAthlete(youKit, player, running)
-    placeAthlete(aiKit, ai, true)
+    placeAthlete(aiKit, ai, opponentRunning)
     placeAthlete(farKit, keeperFar, Math.abs(ball.x - keeperFar.x) > 0.2)
     placeAthlete(nearKit, keeperNear, Math.abs(ball.x - keeperNear.x) > 0.2)
     ballMesh.position.set(ball.x, ball.y, ball.z)
@@ -341,20 +480,50 @@ export function createSoccer() {
     kit.rightArm.rotation.x = swing * 0.55
   }
 
-  function aimCamera(dt) {
-    const targetX = player.x * 0.72
+  function aimCamera(dt, person = player, forward = 1) {
+    const targetX = person.x * 0.72
     const targetY = 5.6
-    const targetZ = player.z - 9.2
+    const targetZ = person.z - forward * 9.2
     const blend = snap ? 1 : 1 - Math.exp(-4 * dt)
     camera.position.x += (targetX - camera.position.x) * blend
     camera.position.y += (targetY - camera.position.y) * blend
     camera.position.z += (targetZ - camera.position.z) * blend
-    camera.lookAt(player.x * 0.3, 0.45, player.z + 7)
+    camera.lookAt(person.x * 0.3, 0.45, person.z + forward * 7)
     snap = false
   }
 
   reset()
-  return { scene, camera, update, reset, status }
+  return {
+    scene,
+    camera,
+    update,
+    reset,
+    status,
+    beginOnline,
+    endOnline,
+    pushRemote,
+    pushState,
+    snapshot,
+    togglePause,
+    isHost: () => online === 'host',
+    isGuest: () => online === 'guest',
+    isOnline: () => online != null,
+    netPaused: () => netPause,
+  }
+}
+
+function pack(body) {
+  return { x: round(body.x), z: round(body.z), h: round(body.heading) }
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100
+}
+
+function glide(body, pose, blend) {
+  body.x += (pose.x - body.x) * blend
+  body.z += (pose.z - body.z) * blend
+  body.heading = lerpAngle(body.heading, pose.h, blend)
 }
 
 function separate(player, other) {
